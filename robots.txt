@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dellavita.example.com/sitemap.xml
