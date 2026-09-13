@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de administración — Dellavita</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --espresso: #2A1B12;
+    --parchment: #F1E8D8;
+    --clay: #A8492E;
+    --clay-dark: #7E361F;
+    --moss: #5C6B47;
+    --line: rgba(42,27,18,0.16);
+    --cream: #FBF7EF;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Work Sans", sans-serif;
+    background: var(--parchment);
+    color: var(--espresso);
+    padding: 40px 20px 100px;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  h1 {
+    font-family: "Fraunces", serif;
+    font-size: 1.9rem;
+    margin-bottom: 6px;
+  }
+  .sub { color: rgba(42,27,18,0.65); margin-bottom: 34px; font-size: 0.95rem; }
+
+  .gate {
+    background: var(--cream);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 28px;
+    max-width: 420px;
+  }
+  .gate label { font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 8px; }
+  .gate input {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font-size: 1rem;
+    margin-bottom: 14px;
+  }
+
+  button {
+    cursor: pointer;
+    font-family: "Work Sans", sans-serif;
+    font-weight: 600;
+    border: none;
+    border-radius: 4px;
+    padding: 11px 20px;
+    font-size: 0.92rem;
+  }
+  .btn-primary { background: var(--clay); color: #fff; }
+  .btn-primary:hover { background: var(--clay-dark); }
+  .btn-ghost { background: transparent; color: var(--clay); border: 1px solid var(--clay); }
+  .btn-danger { background: transparent; color: #8a2b20; font-size: 0.82rem; padding: 6px 12px; }
+
+  #app { display: none; }
+
+  .product-edit {
+    background: var(--cream);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 22px;
+    margin-bottom: 18px;
+  }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.full { grid-column: 1 / -1; }
+  .field label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: rgba(42,27,18,0.6); }
+  .field input, .field textarea {
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.95rem;
+  }
+  .field textarea { resize: vertical; min-height: 54px; }
+  .edit-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 30px 0 18px;
+  }
+
+  .save-bar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--espresso);
+    padding: 16px 20px;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    align-items: center;
+  }
+  .save-bar .status { color: var(--parchment); font-size: 0.9rem; }
+  .save-bar .btn-primary { padding: 12px 28px; }
+
+  a.back-link { color: var(--clay); text-decoration: none; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>Panel de Dellavita</h1>
+  <p class="sub">Editá los cafés de la tienda. Los cambios se publican solos en un minuto.</p>
+
+  <div class="gate" id="gate">
+    <label for="pw">Clave de administración</label>
+    <input type="password" id="pw" placeholder="•••••••••••">
+    <button class="btn-primary" id="enter-btn">Entrar</button>
+    <p id="gate-error" style="color:#8a2b20; font-size:0.85rem; margin-top:10px; display:none;"></p>
+  </div>
+
+  <div id="app">
+    <div class="toolbar">
+      <a class="back-link" href="index.html">← Volver al sitio</a>
+      <button class="btn-ghost" id="add-product-btn">+ Agregar café</button>
+    </div>
+    <div id="product-list"></div>
+  </div>
+</div>
+
+<div class="save-bar" id="save-bar" style="display:none;">
+  <span class="status" id="status"></span>
+  <button class="btn-primary" id="save-btn">Guardar cambios</button>
+</div>
+
+<script>
+let ADMIN_PASSWORD = "";
+let products = [];
+
+function fieldRow(id, index) {
+  const p = products[index];
+  return `
+    <div class="product-edit" data-index="${index}">
+      <div class="field-row">
+        <div class="field">
+          <label>Nombre</label>
+          <input type="text" data-key="name" value="${escapeAttr(p.name)}">
+        </div>
+        <div class="field">
+          <label>Precio (ARS)</label>
+          <input type="number" data-key="price" value="${p.price}" min="0" step="1">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Origen</label>
+          <input type="text" data-key="origin" value="${escapeAttr(p.origin)}">
+        </div>
+        <div class="field">
+          <label>Etiqueta (tueste)</label>
+          <input type="text" data-key="badge" value="${escapeAttr(p.badge)}">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field full">
+          <label>Descripción / notas de cata</label>
+          <textarea data-key="notes">${escapeHTML(p.notes)}</textarea>
+        </div>
+      </div>
+      <div class="edit-foot">
+        <span style="font-size:0.78rem;color:rgba(42,27,18,0.5);">ID interno: ${escapeHTML(p.id)}</span>
+        <button class="btn-danger" data-remove="${index}">Quitar este café</button>
+      </div>
+    </div>`;
+}
+
+function escapeHTML(str) {
+  return String(str ?? "").replace(/[&<>"']/g, (m) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+function escapeAttr(str) { return escapeHTML(str); }
+
+function renderList() {
+  document.getElementById("product-list").innerHTML =
+    products.map((_, i) => fieldRow(null, i)).join("");
+}
+
+function slugify(str) {
+  return String(str || "cafe")
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") || "cafe-" + Date.now();
+}
+
+document.getElementById("product-list").addEventListener("input", (e) => {
+  const wrap = e.target.closest(".product-edit");
+  if (!wrap) return;
+  const index = Number(wrap.dataset.index);
+  const key = e.target.dataset.key;
+  if (!key) return;
+  products[index][key] = key === "price" ? Number(e.target.value) : e.target.value;
+  setStatus("Cambios sin guardar");
+});
+
+document.getElementById("product-list").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-remove]");
+  if (!btn) return;
+  const index = Number(btn.dataset.remove);
+  if (!confirm(`¿Quitar "${products[index].name}" de la tienda?`)) return;
+  products.splice(index, 1);
+  renderList();
+  setStatus("Cambios sin guardar");
+});
+
+document.getElementById("add-product-btn").addEventListener("click", () => {
+  const name = "Nuevo café";
+  products.push({
+    id: slugify(name) + "-" + Math.random().toString(36).slice(2, 6),
+    badge: "Tueste medio",
+    name,
+    origin: "",
+    notes: "",
+    price: 0,
+  });
+  renderList();
+  setStatus("Cambios sin guardar");
+});
+
+function setStatus(msg) {
+  document.getElementById("status").textContent = msg;
+}
+
+document.getElementById("save-btn").addEventListener("click", async () => {
+  setStatus("Guardando…");
+  document.getElementById("save-btn").disabled = true;
+  try {
+    const res = await fetch("/.netlify/functions/update-products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: ADMIN_PASSWORD, products }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error al guardar");
+    setStatus("¡Guardado! El sitio se actualiza en menos de un minuto.");
+  } catch (e) {
+    setStatus("Error: " + e.message);
+  } finally {
+    document.getElementById("save-btn").disabled = false;
+  }
+});
+
+document.getElementById("enter-btn").addEventListener("click", async () => {
+  const pw = document.getElementById("pw").value;
+  if (!pw) return;
+  ADMIN_PASSWORD = pw;
+  try {
+    const res = await fetch("products.json?_=" + Date.now(), { cache: "no-store" });
+    products = await res.json();
+    document.getElementById("gate").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    document.getElementById("save-bar").style.display = "flex";
+    renderList();
+    setStatus("");
+  } catch (e) {
+    document.getElementById("gate-error").style.display = "block";
+    document.getElementById("gate-error").textContent = "No se pudo cargar la tienda. Probá de nuevo.";
+  }
+});
+</script>
+</body>
+</html>
