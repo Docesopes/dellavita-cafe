@@ -101,6 +101,56 @@ function formatARS(n) {
   return "$" + n.toLocaleString("es-AR");
 }
 
+function escapeHTML(str) {
+  return String(str ?? "").replace(/[&<>"']/g, (m) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[m]));
+}
+
+const BEAN_COLORS = ["#8C5A2E", "#A8492E", "#C79A44", "#5A3A1C", "#5C6B47"];
+
+function productCardHTML(p, i) {
+  const c1 = BEAN_COLORS[i % BEAN_COLORS.length];
+  const c2 = BEAN_COLORS[(i + 1) % BEAN_COLORS.length];
+  const c3 = BEAN_COLORS[(i + 2) % BEAN_COLORS.length];
+  const price = Number(p.price) || 0;
+  return `
+    <article class="product-card">
+      <span class="product-badge">${escapeHTML(p.badge)}</span>
+      <div class="product-art">
+        <svg viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="60" cy="65" rx="26" ry="17" fill="${c1}" transform="rotate(-15 60 65)"/>
+          <ellipse cx="100" cy="50" rx="26" ry="17" fill="${c2}" transform="rotate(10 100 50)"/>
+          <ellipse cx="140" cy="70" rx="26" ry="17" fill="${c3}" transform="rotate(-8 140 70)"/>
+        </svg>
+      </div>
+      <h3 class="product-name">${escapeHTML(p.name)}</h3>
+      <div class="product-origin">${escapeHTML(p.origin)}</div>
+      <p class="product-notes">${escapeHTML(p.notes)}</p>
+      <div class="product-foot">
+        <span class="product-price">${formatARS(price)}</span>
+        <button class="add-btn" data-id="${escapeHTML(p.id)}" data-name="${escapeHTML(p.name)} (250 g)" data-price="${price}">Agregar</button>
+      </div>
+    </article>`;
+}
+
+async function loadProducts() {
+  const container = document.getElementById("product-row");
+  if (!container) return;
+  try {
+    const res = await fetch("products.json?_=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) throw new Error("No se pudo cargar la tienda");
+    const products = await res.json();
+    container.innerHTML = products.map(productCardHTML).join("");
+  } catch (e) {
+    container.innerHTML = '<p class="cart-empty">No pudimos cargar la tienda. Probá recargar la página.</p>';
+  }
+}
+
 function render() {
   const countEl = document.querySelector(".cart-count");
   const itemsEl = document.querySelector(".cart-items");
@@ -159,14 +209,15 @@ function closeCart() {
 document.addEventListener("DOMContentLoaded", () => {
   Cart.load();
   render();
+  loadProducts();
 
-  document.querySelectorAll(".add-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      Cart.add({
-        id: btn.dataset.id,
-        name: btn.dataset.name,
-        price: Number(btn.dataset.price),
-      });
+  document.getElementById("product-row")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".add-btn");
+    if (!btn) return;
+    Cart.add({
+      id: btn.dataset.id,
+      name: btn.dataset.name,
+      price: Number(btn.dataset.price),
     });
   });
 
