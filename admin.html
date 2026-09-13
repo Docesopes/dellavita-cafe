@@ -139,6 +139,37 @@
 <script>
 let ADMIN_PASSWORD = "";
 let products = [];
+let pendingImages = {}; // { productId: "data:image/jpeg;base64,..." }
+
+function resizeImageFile(file, maxSize = 1000, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width >= height) {
+            height = Math.round(height * (maxSize / width));
+            width = maxSize;
+          } else {
+            width = Math.round(width * (maxSize / height));
+            height = maxSize;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => reject(new Error("No se pudo leer la imagen"));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+    reader.readAsDataURL(file);
+  });
+}
 
 function fieldRow(id, index) {
   const p = products[index];
@@ -162,6 +193,17 @@ function fieldRow(id, index) {
         <div class="field">
           <label>Etiqueta (tueste)</label>
           <input type="text" data-key="badge" value="${escapeAttr(p.badge)}">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field full">
+          <label>Foto del producto</label>
+          <div class="image-edit">
+            <img class="thumb" src="${p.image ? escapeAttr(p.image) : ""}" style="display:${p.image ? "block" : "none"};width:84px;height:84px;object-fit:cover;border-radius:4px;border:1px solid var(--line);margin-bottom:8px;">
+            <div class="no-thumb" style="display:${p.image ? "none" : "block"};font-size:0.82rem;color:rgba(42,27,18,0.55);margin-bottom:8px;">Sin foto todavía — se muestra una ilustración genérica.</div>
+            <input type="file" accept="image/png, image/jpeg, image/webp" class="image-input">
+            <button type="button" class="btn-danger remove-image-btn" style="display:${p.image ? "inline-block" : "none"};margin-left:10px;">Quitar foto</button>
+          </div>
         </div>
       </div>
       <div class="field-row">
@@ -205,14 +247,57 @@ document.getElementById("product-list").addEventListener("input", (e) => {
   setStatus("Cambios sin guardar");
 });
 
+document.getElementById("product-list").addEventListener("change", async (e) => {
+  if (!e.target.classList.contains("image-input")) return;
+  const wrap = e.target.closest(".product-edit");
+  const index = Number(wrap.dataset.index);
+  const file = e.target.files[0];
+  if (!file) return;
+
+  setStatus("Procesando imagen…");
+  try {
+    const dataUrl = await resizeImageFile(file);
+    const id = products[index].id;
+    products[index].image = `img/products/${id}.jpg`;
+    pendingImages[id] = dataUrl;
+
+    const thumb = wrap.querySelector(".thumb");
+    const noThumb = wrap.querySelector(".no-thumb");
+    const removeBtn = wrap.querySelector(".remove-image-btn");
+    thumb.src = dataUrl;
+    thumb.style.display = "block";
+    noThumb.style.display = "none";
+    removeBtn.style.display = "inline-block";
+    setStatus("Cambios sin guardar");
+  } catch (err) {
+    setStatus("No se pudo procesar esa imagen, probá con otra.");
+  }
+});
+
 document.getElementById("product-list").addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-remove]");
-  if (!btn) return;
-  const index = Number(btn.dataset.remove);
-  if (!confirm(`¿Quitar "${products[index].name}" de la tienda?`)) return;
-  products.splice(index, 1);
-  renderList();
-  setStatus("Cambios sin guardar");
+  const removeImgBtn = e.target.closest(".remove-image-btn");
+  if (removeImgBtn) {
+    const wrap = removeImgBtn.closest(".product-edit");
+    const index = Number(wrap.dataset.index);
+    const id = products[index].id;
+    products[index].image = "";
+    delete pendingImages[id];
+    wrap.querySelector(".thumb").style.display = "none";
+    wrap.querySelector(".no-thumb").style.display = "block";
+    removeImgBtn.style.display = "none";
+    setStatus("Cambios sin guardar");
+    return;
+  }
+
+  const removeBtn = e.target.closest("[data-remove]");
+  if (removeBtn) {
+    const index = Number(removeBtn.dataset.remove);
+    if (!confirm(`¿Quitar "${products[index].name}" de la tienda?`)) return;
+    delete pendingImages[products[index].id];
+    products.splice(index, 1);
+    renderList();
+    setStatus("Cambios sin guardar");
+  }
 });
 
 document.getElementById("add-product-btn").addEventListener("click", () => {
@@ -240,10 +325,11 @@ document.getElementById("save-btn").addEventListener("click", async () => {
     const res = await fetch("/.netlify/functions/update-products", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: ADMIN_PASSWORD, products }),
+      body: JSON.stringify({ password: ADMIN_PASSWORD, products, images: pendingImages }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Error al guardar");
+    pendingImages = {};
     setStatus("¡Guardado! El sitio se actualiza en menos de un minuto.");
   } catch (e) {
     setStatus("Error: " + e.message);
