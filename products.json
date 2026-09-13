@@ -5,7 +5,8 @@
     "name": "Finca La Esperanza",
     "origin": "Huila, Colombia — 1.700 msnm",
     "notes": "Notas a cacao, ciruela y caramelo. Cuerpo medio, acidez suave.",
-    "price": 9800
+    "price": 9800,
+    "image": ""
   },
   {
     "id": "alto-yungas",
@@ -13,7 +14,8 @@
     "name": "Alto Yungas",
     "origin": "Yungas, Bolivia — 1.900 msnm",
     "notes": "Frutos rojos, panela y un final a té negro. Muy aromático.",
-    "price": 10500
+    "price": 10500,
+    "image": ""
   },
   {
     "id": "cerrado-dourado",
@@ -21,7 +23,8 @@
     "name": "Cerrado Dourado",
     "origin": "Cerrado Mineiro, Brasil — 1.100 msnm",
     "notes": "Nuez, chocolate con leche y almendra tostada. Cuerpo alto.",
-    "price": 9200
+    "price": 9200,
+    "image": ""
   },
   {
     "id": "valle-sagrado",
@@ -29,7 +32,8 @@
     "name": "Valle Sagrado",
     "origin": "Cusco, Perú — 1.800 msnm",
     "notes": "Manzana verde, miel y un toque cítrico. Acidez brillante.",
-    "price": 10900
+    "price": 10900,
+    "image": ""
   },
   {
     "id": "blend-dellavita",
@@ -37,6 +41,7 @@
     "name": "Blend Dellavita",
     "origin": "Mezcla de la casa",
     "notes": "Chocolate, avellana y cítrico suave. Nuestro café de todos los días.",
-    "price": 8700
+    "price": 8700,
+    "image": ""
   }
 ]
