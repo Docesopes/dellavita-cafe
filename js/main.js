@@ -118,16 +118,17 @@ function productCardHTML(p, i) {
   const c2 = BEAN_COLORS[(i + 1) % BEAN_COLORS.length];
   const c3 = BEAN_COLORS[(i + 2) % BEAN_COLORS.length];
   const price = Number(p.price) || 0;
-  return `
-    <article class="product-card">
-      <span class="product-badge">${escapeHTML(p.badge)}</span>
-      <div class="product-art">
-        <svg viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg">
+  const art = p.image
+    ? `<img src="${escapeHTML(p.image)}" alt="${escapeHTML(p.name)}" loading="lazy">`
+    : `<svg viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg">
           <ellipse cx="60" cy="65" rx="26" ry="17" fill="${c1}" transform="rotate(-15 60 65)"/>
           <ellipse cx="100" cy="50" rx="26" ry="17" fill="${c2}" transform="rotate(10 100 50)"/>
           <ellipse cx="140" cy="70" rx="26" ry="17" fill="${c3}" transform="rotate(-8 140 70)"/>
-        </svg>
-      </div>
+        </svg>`;
+  return `
+    <article class="product-card">
+      <span class="product-badge">${escapeHTML(p.badge)}</span>
+      <div class="product-art">${art}</div>
       <h3 class="product-name">${escapeHTML(p.name)}</h3>
       <div class="product-origin">${escapeHTML(p.origin)}</div>
       <p class="product-notes">${escapeHTML(p.notes)}</p>
